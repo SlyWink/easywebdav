@@ -37,7 +37,7 @@ def prop(elem, name, default=None):
 def elem2file(elem):
     return File(
         prop(elem, 'href'),
-        int(prop(elem, 'getcontentlength', 0)),
+        prop(elem, 'getcontentlength', ''),
         prop(elem, 'getlastmodified', ''),
         prop(elem, 'creationdate', ''),
         prop(elem, 'getcontenttype', ''),
@@ -171,9 +171,9 @@ class Client(object):
         for chunk in response.iter_content(DOWNLOAD_CHUNK_SIZE_BYTES):
             fileobj.write(chunk)
 
-    def ls(self, remote_path='.'):
+    def ls(self, remote_path=''):
         headers = {'Depth': '1'}
-        response = self._send('PROPFIND', remote_path, (207, 301), headers=headers)
+        response = self._send('PROPFIND', remote_path, (207, 301, 404), headers=headers)
 
         # Redirect
         if response.status_code == 301:
@@ -181,8 +181,8 @@ class Client(object):
             return self.ls(url.path)
 
         tree = xml.fromstring(response.content)
-        return [elem2file(elem) for elem in tree.findall('{DAV:}response')]
+        return [elem2file(elem) for elem in tree.findall('./{DAV:}response')]
 
     def exists(self, remote_path):
-        response = self._send('HEAD', remote_path, (200, 301, 404))
+        response = self._send('HEAD', remote_path, (200, 204, 301, 404, 501))
         return True if response.status_code != 404 else False
